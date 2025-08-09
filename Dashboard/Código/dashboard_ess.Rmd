@@ -1,0 +1,86 @@
+---
+title: "Dashboard Uso de medios y confianza ESS"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: fill
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+# ==== Paquetes ====
+need <- c("flexdashboard","tidyverse","plotly","shiny","readr","glue","here")
+inst <- need[!(need %in% installed.packages()[,"Package"])]
+if (length(inst) > 0) install.packages(inst)
+lapply(need, library, character.only = TRUE)
+
+# ==== Cargar CSV depurado ====
+ruta_csv <- here::here("Datos", "Base de datos depurada", "ESS_media_dep.csv")
+
+if (!file.exists(ruta_csv)) {
+  stop(glue::glue("No se encontró el archivo:\n{ruta_csv}\n\nEjecuta primero el script de depuración y vuelve a intentar."))
+}
+
+data <- readr::read_csv(ruta_csv, show_col_types = FALSE) |>
+  mutate(
+    pais  = factor(pais),
+    ronda = factor(ronda, levels = sort(unique(ronda)))
+  )
+```
+
+Row {data-height=500}
+-----------------------------------------------------------------------
+
+### Uso promedio de internet por país
+
+```{r}
+data %>%
+  group_by(pais) %>%
+  summarise(promedio_internet = mean(uso_internet_tiempo_min, na.rm = TRUE)) %>%
+  arrange(desc(promedio_internet)) %>%
+  plot_ly(
+    x = ~pais,
+    y = ~promedio_internet,
+    type = 'bar'
+  ) %>%
+  layout(title = "Promedio de minutos de uso de Internet por país",
+         xaxis = list(title = "País"),
+         yaxis = list(title = "Minutos promedio"))
+```
+
+### Confianza en personas por ronda
+
+```{r}
+ggplot(data, aes(x = ronda, y = confianza_personas)) +
+  geom_boxplot(fill = "skyblue") +
+  labs(title = "Distribución de confianza por ronda ESS",
+       x = "Ronda",
+       y = "Confianza (0-10)") +
+  theme_minimal()
+```
+
+Row {data-height=500}
+-----------------------------------------------------------------------
+
+### Relación entre uso de Internet y confianza
+
+```{r}
+plot_ly(
+  data = data,
+  x = ~uso_internet_tiempo_min,
+  y = ~confianza_personas,
+  color = ~pais,
+  type = 'scatter',
+  mode = 'markers'
+) %>%
+  layout(title = "Uso de internet vs. confianza en personas",
+         xaxis = list(title = "Minutos de Internet"),
+         yaxis = list(title = "Confianza (0-10)"))
+```
+
+### Tabla de datos filtrable
+
+```{r}
+library(DT)
+datatable(data, options = list(pageLength = 10))
+```

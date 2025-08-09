@@ -1,0 +1,108 @@
+---
+title: "Informe técnico — Uso de medios y confianza (ESS)"
+author: "Arturo"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    df_print: paged
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+# Paquetes
+need <- c("tidyverse","readr","here","knitr","kableExtra","ggplot2")
+inst <- need[!(need %in% installed.packages()[,"Package"])]
+if (length(inst) > 0) install.packages(inst)
+lapply(need, library, character.only = TRUE)
+
+# Cargar datos depurados
+ruta_csv <- here::here("Datos","Base de datos depurada","ESS_media_dep.csv")
+if (!file.exists(ruta_csv)) stop("No se encontró: ", ruta_csv)
+data <- readr::read_csv(ruta_csv, show_col_types = FALSE) |>
+  mutate(
+    pais  = factor(pais),
+    ronda = factor(ronda)
+  )
+
+# Opciones knitr
+knitr::opts_chunk$set(message = FALSE, warning = FALSE, fig.width = 8, fig.height = 4.8)
+```
+
+# 1. Descripción breve
+
+Este informe resume hallazgos del módulo **Media use & trust** del **European Social Survey** (ESS), a partir de la base depurada usada en el proyecto.
+
+- Observaciones totales: **`r nrow(data)`**  
+- Países: **`r dplyr::n_distinct(data$pais)`**  
+- Rondas ESS: **`r paste(sort(unique(data$ronda)), collapse = ", ")`**  
+
+Los indicadores clave utilizados son:
+
+- `uso_internet_tiempo_min`: minutos de uso de internet en un día típico  
+- `tv_politica` y `lectura_politica`: tiempo en categorías (0–7) dedicado a noticias de política en TV y prensa  
+- `confianza_personas`: escala 0–10 (mayor = más confianza interpersonal)
+
+> Nota: Las categorías especiales (66/77/88/99/6666/7777/8888/9999) fueron tratadas como **NA** según el codebook.
+
+# 2. Tabla resumen (indicadores por país)
+
+A continuación se muestra un resumen por país con promedios de los indicadores principales.  
+Las columnas de TV y prensa son promedios en su **escala ordinal** (0–7).
+
+```{r tabla-resumen}
+tabla_pais <- data %>%
+  group_by(pais) %>%
+  summarise(
+    n                = n(),
+    internet_min_med = mean(uso_internet_tiempo_min, na.rm = TRUE),
+    tv_politica_med  = mean(tv_politica, na.rm = TRUE),
+    prensa_pol_med   = mean(lectura_politica, na.rm = TRUE),
+    confianza_med    = mean(confianza_personas, na.rm = TRUE)
+  ) %>%
+  arrange(desc(internet_min_med))
+
+knitr::kable(
+  tabla_pais,
+  caption = "Resumen por país: tamaño muestral y promedios de indicadores",
+  digits = 2,
+  align = "lrrrrr"
+) |>
+  kableExtra::kable_styling(full_width = FALSE, bootstrap_options = c("striped","hover"))
+```
+
+**Comentario:** En promedio, el país con mayor uso de internet (minutos/día) es **`r tabla_pais$pais[1]`** con **`r round(tabla_pais$internet_min_med[1],1)`** min/día, mientras que la **confianza interpersonal** media más alta se observa en **`r tabla_pais$pais[which.max(tabla_pais$confianza_med)]`** (≈ **`r round(max(tabla_pais$confianza_med, na.rm=TRUE),2)`**).
+
+# 3. Gráfico principal
+
+A continuación exploramos la relación entre **uso de internet** y **confianza interpersonal**.  
+Se muestra un diagrama de dispersión con una curva de tendencia (LOESS).
+
+```{r grafico-principal}
+ggplot(data, aes(x = uso_internet_tiempo_min, y = confianza_personas)) +
+  geom_point(alpha = 0.3, size = 1, aes(color = pais)) +
+  geom_smooth(method = "loess", se = TRUE, color = "black") +
+  labs(
+    title = "Uso de internet (min/día) vs. confianza interpersonal (0–10)",
+    x = "Minutos de internet por día (típico)",
+    y = "Confianza interpersonal (0–10)",
+    color = "País"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "none")
+```
+
+**Lectura del gráfico:** En el conjunto de países y rondas, la tendencia global es **`r ifelse(cor(data$uso_internet_tiempo_min, data$confianza_personas, use='complete.obs') >= 0,'ligeramente positiva','ligeramente negativa')`** (correlación ≈ **`r round(cor(data$uso_internet_tiempo_min, data$confianza_personas, use='complete.obs'), 2)`**), si bien **existe heterogeneidad** por país/ronda (no mostrada aquí).
+
+# 4. Hallazgos en relación con los objetivos
+
+- **O1. Entender patrones de uso de medios**: La tabla muestra diferencias notables entre países en minutos de internet y consumo informativo (TV/prensa).  
+- **O2. Describir variaciones en confianza interpersonal**: La media de confianza varía entre países; p.ej., el valor más alto observado es ≈ **`r round(max(tabla_pais$confianza_med, na.rm=TRUE),2)`**.  
+- **O3. Explorar relación medios–confianza**: La relación global **`r ifelse(cor(data$uso_internet_tiempo_min, data$confianza_personas, use='complete.obs') >= 0,'no sugiere efectos negativos claros','no apoya una relación positiva clara')`** entre uso de internet y confianza, pero **debe analizarse por país/ronda**.
+
+# 5. Conclusiones y próximos pasos
+
+- Los **promedios por país** son útiles para comunicar resultados de alto nivel; sin embargo, conviene complementar con **modelos multivariantes** (p. ej., efectos por país y ronda, y controles demográficos si están disponibles en otra tabla del ESS).  
+- Para mejorar el storytelling, se pueden añadir **gráficos por país** (pequeños múltiples) o un **dashboard** (ya desarrollado en el repo) para exploración interactiva.
+

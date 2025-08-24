@@ -1,0 +1,9 @@
+---
+title: "Reto 1 - Visualizacion y Storytelling con ESS"
+author: "Arturo Flores Maldonado"
+date: "2025-08-24"
+output: html_document
+---
+# Comprobacion
+
+Si esto compila a HTML, el YAML ya está correcto.

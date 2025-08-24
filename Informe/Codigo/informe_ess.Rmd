@@ -1,0 +1,298 @@
+---
+title: "Reto 1 - Visualizacion y Storytelling con ESS"
+author: "Arturo Flores Maldonado"
+date: "2025-08-24"
+output:
+  pdf_document:
+    latex_engine: xelatex
+---
+
+
+```{r setup, include=FALSE}
+# Paquetes
+need <- c("tidyverse","readr","here","ggplot2","knitr")
+inst <- need[!(need %in% installed.packages()[,"Package"])]
+if (length(inst) > 0) install.packages(inst)
+lapply(need, library, character.only = TRUE)
+
+# Cargar datos depurados (del reto 2)
+ruta_csv <- here::here("Datos","Base de datos depurada","ESS_media_dep.csv")
+if (!file.exists(ruta_csv)) stop("No se encontró: ", ruta_csv, ". Verifica la ruta y ejecuta el script de depuración.")
+data <- readr::read_csv(ruta_csv, show_col_types = FALSE) |>
+  mutate(
+    pais  = factor(pais),
+    ronda = factor(ronda)
+  )
+
+# Opciones de gráficos
+knitr::opts_chunk$set(message = FALSE, warning = FALSE, fig.width = 8, fig.height = 4.8)
+```
+
+# Portada
+
+**Alumno/a:** Arturo Flores Maldonado  
+**Docente:** *[Nombre de la docente]*  
+**Módulo:** Módulo 8 — Visualización de Datos y Storytelling  
+**Fecha:** `r format(Sys.Date(), "%d/%m/%Y")`
+
+---
+
+# Tarea 1. Análisis exploratorio de datos (EDA)
+
+## 1. Descripción de los campos
+
+El conjunto de datos corresponde al módulo **Media use and trust** del **European Social Survey (ESS)**, depurado previamente.
+
+- **pais** — Categórica (geográfica). País del/la encuestado/a.  
+- **ronda** — Temporal discreta (ronda/año ESS).  
+- **uso_internet_tiempo_min** — Numérica continua. Minutos de uso de internet en un día típico.  
+- **tv_politica** — Ordinal (0–7). Frecuencia de ver información política en TV.  
+- **lectura_politica** — Ordinal (0–7). Frecuencia de leer información política en prensa.  
+- **confianza_personas** — Numérica continua (0–10). Confianza interpersonal.
+
+> Los códigos especiales (66/77/88/99 y 6666/7777/8888/9999) fueron tratados como **NA** en la depuración.
+
+## 2. Distribuciones
+
+```{r}
+# Histograma de confianza interpersonal
+ggplot(data, aes(x = confianza_personas)) +
+  geom_histogram(binwidth = 1, color = "white") +
+  labs(title = "Distribución de la confianza interpersonal",
+       x = "Confianza (0–10)", y = "Frecuencia") +
+  theme_minimal()
+```
+
+```{r}
+# Boxplot de uso de internet en minutos/día
+ggplot(data, aes(y = uso_internet_tiempo_min)) +
+  geom_boxplot() +
+  labs(title = "Uso de internet (minutos/día)", y = "Minutos") +
+  theme_minimal()
+```
+
+**Comentarios preliminares:**  
+- Describir forma de las distribuciones, presencia de asimetrías y **outliers**.  
+- Indicar el rango típico de uso de internet y la concentración de valores de confianza.
+
+## 3. Relaciones entre variables
+
+```{r}
+# Relación entre uso de internet y confianza
+ggplot(data, aes(x = uso_internet_tiempo_min, y = confianza_personas)) +
+  geom_point(alpha = 0.3, size = 1) +
+  geom_smooth(method = "loess", se = TRUE) +
+  labs(title = "Uso de internet vs. confianza interpersonal",
+       x = "Minutos de internet (día típico)",
+       y = "Confianza (0–10)") +
+  theme_minimal()
+```
+
+**Lectura (resumir):**  
+- Señalar si se observa tendencia global (p. ej., débil) y matizar que puede variar por **país** y **ronda**.
+
+## 4. Selección para el dashboard
+
+A partir del EDA, se incluirán:
+- **Exposición mediática:** `uso_internet_tiempo_min`, `tv_politica`, `lectura_politica`.  
+- **Resultado:** `confianza_personas`.  
+- **Ejes comparativos:** `pais` (geográfico) y `ronda` (temporal).
+
+Estas variables permiten comparar países, observar evolución y explorar la relación entre consumo de medios y confianza.
+
+---
+
+# Tarea 2. Audiencia y objetivo (aproximación top-down)
+
+## 2.1 Audiencia
+
+**Perfil principal (personas):**
+- **Docente y equipo académico** del Módulo 8 (visualización y ciencias sociales).
+- **Estudiantes/investigadores junior**, familiarizados con lectura de gráficos comunes.
+
+**Conocimiento previo:**
+- **Dominio**: medio (conocen ESS y su contexto).  
+- **Visualización**: intermedio (barras, cajas, líneas, dispersión).  
+- **Estadística**: básico–intermedio (promedios, tendencia, correlación simple).
+
+**Plataforma y dispositivo:**
+- **Navegador web** (dashboard HTML) en **ordenador**; ocasionalmente proyector.
+
+**Contexto y periodicidad de uso:**
+- Docencia y exploración académica.  
+- Bajo demanda; actualización al publicarse **nuevas rondas ESS**.
+
+**Necesidades clave:**
+- Comparar **países** y **rondas** con claridad.  
+- Ver **tendencias** y **diferencias** en exposición mediática.  
+- Relacionar exposición mediática con **confianza interpersonal**.
+
+## 2.2 Objetivo del dashboard
+
+**Objetivo general:**  
+> Explorar y comparar el **uso de medios informativos** (internet, TV, prensa) y su relación con la **confianza interpersonal** entre **países** y **rondas del ESS**, identificando patrones, diferencias y posibles tendencias.
+
+**Resultados esperados:**
+- Identificar **países** con niveles altos/bajos de uso de internet informativo.  
+- Observar **evolución temporal** de la confianza.  
+- Detectar **asociaciones** descriptivas entre consumo de medios y confianza.  
+- Permitir **comparaciones rápidas** mediante KPIs y gráficos simples.
+
+## 2.3 Preguntas de la audiencia (3–7)
+
+1. ¿Qué países presentan mayor **uso de internet** informativo (min/día)?  
+2. ¿Cómo evoluciona la **confianza interpersonal** por **ronda** del ESS?  
+3. ¿Qué diferencias hay entre **TV política** y **lectura política** (0–7) por país?  
+4. ¿Existe una **relación observable** entre **uso de internet** y **confianza**?  
+5. ¿Qué países muestran **cambios más acusados** entre rondas?  
+6. ¿Cómo se compara un país con la **media global** del ESS?  
+7. ¿Qué **outliers** aparecen (país/ronda con valores extremos)?
+
+## 2.4 Criterios de éxito
+
+- Responder **≥5 de 7** preguntas sin ayuda.  
+- Identificar diferencias entre países en **< 60 s**.  
+- Filtros de país y ronda **claros** y **consistentes**.
+
+---
+
+# Tarea 3. Selección de gráficos y codificación
+
+## 3.1 Objetivo de comunicación
+- **Comparar países** en indicadores de medios.  
+- **Observar tendencias** por **ronda**.  
+- **Explorar relaciones** medios ↔ **confianza**.
+
+## 3.2 Gráficos seleccionados (y por qué)
+
+1) **Barras agrupadas por país**  
+   - Función: comparación entre categorías (país) y entre medios (series).  
+   - Percepción: **longitud** (precisa); color sólo para distinguir series.  
+   - Uso: diferencias claras por país en ronda seleccionada.
+
+2) **Series de tiempo (líneas)**  
+   - Función: evolución temporal de `confianza_personas` (y opcionalmente internet).  
+   - Percepción: **posición** y **continuidad**; muy buenas para tendencias.  
+
+3) **Dispersión (scatter) Internet vs Confianza**  
+   - Función: relación entre `uso_internet_tiempo_min` y `confianza_personas`.  
+   - Percepción: **posición** en 2D; LOESS apoya lectura.
+
+4) **KPIs**  
+   - Función: vista rápida de promedios globales/filtrados.  
+   - Percepción: números grandes con alto **contraste**.
+
+> **Descartados**: pie/treemap (comparación imprecisa), heatmap complejo (menos interpretable para esta audiencia sin guía).
+
+## 3.3 Codificación visual
+
+| Variable                        | Tipo       | Gráfico     | Canal principal | Secundario | Razón |
+|---------------------------------|------------|-------------|-----------------|-----------|-------|
+| `pais`                          | Categ.     | Barras      | Eje X           | Color     | Longitud para comparar categorías |
+| `ronda`                         | Temporal   | Línea       | Eje X (tiempo)  | Color     | Posición/continuidad (tendencias) |
+| `uso_internet_tiempo_min` (min)| Numérica   | Barras/Línea/Scatter | Eje Y | – | Longitud/posición precisas |
+| `tv_politica` (0–7)             | Ordinal    | Barras      | Eje Y           | Color     | Promedio de categoría ordinal |
+| `lectura_politica` (0–7)        | Ordinal    | Barras      | Eje Y           | Color     | Idem |
+| `confianza_personas` (0–10)     | Numérica   | Línea/Scatter | Eje Y         | Color     | Posición en línea; relación 2D |
+
+**Color y accesibilidad:** paleta con **alto contraste de luminancia**; evitar rojo–verde sin diferencias de brillo; color no es el único canal.
+
+## 3.4 Escalas y unidades
+- **Internet**: minutos/día → escala lineal (etiquetas 0, 60, 120, …).  
+- **TV/Prensa**: 0–7 (ordinal) → mostrar promedios y explicitar naturaleza ordinal.  
+- **Confianza**: 0–10 → lineal.  
+- **País**: ordenar por valor cuando el objetivo sea **ranking**.  
+- **Ronda**: niveles discretos (1,2,3… o años si estuvieran disponibles).
+
+## 3.5 Riesgos y mitigación
+- **Sobrecarga** (muchos países): Top-N por defecto + selector.  
+- **Colores indistinguibles**: paleta color-blind friendly + contraste.  
+- **Promedios de ordinales**: aclarar su interpretación (descriptiva).  
+- **Tamaños muestrales**: mostrar *n* en tooltips/tablas.
+
+## 3.6 Resumen
+- Barras para comparar países; líneas para tendencias; scatter para relaciones; KPIs para lectura rápida.  
+- Codificación por **posición/longitud** (alta precisión), color como apoyo.
+
+---
+
+# Tarea 4. Disposición e Interacción
+
+## 4.1 Principios (Gestalt + jerarquía)
+- **Lectura**: arriba–abajo (overview → comparación → evolución → relación).  
+- **Proximidad/similitud**: KPIs juntos; gráficos de medios con misma paleta.  
+- **Figura–fondo**: alto contraste en texto y ejes.
+
+## 4.2 Layout del dashboard
+**Sidebar**: Filtros globales (Ronda, País) + ayuda breve.  
+**Fila 1**: 4 KPIs (Internet, TV, Prensa, Confianza).  
+**Fila 2**: Barras agrupadas por país (ranking por indicador activo).  
+**Fila 3**: Serie temporal (Confianza; opcional Internet).  
+**Fila 4**: Scatter Internet ↔ Confianza (LOESS).
+
+## 4.3 Interacciones
+- **Global**: filtro por ronda/país; botón “Reset”.  
+- **Barras**: hover (valores, *n*), orden dinámico; click en país = drill-down.  
+- **Serie**: hover; **brush** de rangos → actualiza KPIs/otros gráficos.  
+- **Scatter**: hover; leyenda interactiva; selección para detalles.
+
+## 4.4 Modelos de interacción
+- **Filtering** (sidebar), **Brushing & Linking** (coordinated views), **Details-on-demand** (tooltips), **Sorting** (rankings).
+
+## 4.5 Justificación
+- Responde a la audiencia (comparar, ver tendencias, explorar relaciones).  
+- Interacciones de baja fricción; aprendizaje rápido.  
+- Canales perceptivos de alta precisión.
+
+## 4.6 Performance
+- Agregación país×ronda cuando sea posible; limitar a Top-N; reactividad bien acotada.
+
+## 4.7 Métricas de éxito (UX)
+- Responder ≥5/7 preguntas en <1 min.  
+- Identificar país líder y tendencia sin ayuda.  
+- Coherencia de filtros en todas las vistas.
+
+---
+
+# Tarea 5. Bocetos iniciales (descripción sin imágenes)
+
+## 5.1 Objetivo
+Bocetos **textuales** que describen disposición y lógica de interacción (sin imágenes).
+
+## 5.2 Boceto A — “Explora y compara”
+- **Sidebar**: Ronda (única/múltiple), País (múltiple), Reset.  
+- **Fila 1**: 4 KPIs (Internet, TV, Prensa, Confianza).  
+- **Fila 2**: Barras por país (Internet/TV/Prensa), orden dinámico por indicador activo.  
+- **Fila 3**: Scatter Internet ↔ Confianza (agregado país×ronda) con LOESS.  
+- **Interacción**: click en barra fija país y actualiza scatter; hover con valores.
+
+**Responde**: P1, P3, P4, P6, P7.
+
+## 5.3 Boceto B — “Evolución y detalle”
+- **Sidebar**: igual que A.  
+- **Fila 1**: KPIs globales o del país seleccionado.  
+- **Fila 2**: Serie temporal de Confianza (línea país vs. media global).  
+- **Fila 3**: Barras del país (Internet/TV/Prensa), ronda seleccionada.  
+- **Interacción**: **brush** en serie → filtra KPIs y barras.
+
+**Responde**: P2, P4, P5, P6.
+
+## 5.4 Justificación
+- **Jerarquía**: overview → comparación → evolución → relación.  
+- **Gestalt**: proximidad, similitud, continuidad.  
+- **Percepción**: longitud/posición; color como apoyo con contraste.
+
+## 5.5 Comentario crítico
+- **A**: comparación clara entre países; menos énfasis temporal.  
+- **B**: buen énfasis temporal; menos comparación masiva entre países.  
+- **Decisión**: partir de **A** (comparación) e incorporar serie temporal de **B**.
+
+---
+
+# Referencias
+
+- **European Social Survey (ESS)** — *Media use and trust* (documentación y codebook).  
+- Cleveland, W. S., & McGill, R. (1984). *Graphical perception: Theory, experimentation, and application to the development of graphical methods*.  
+- Munzner, T. (2014). *Visualization Analysis and Design*.  
+- Cairo, A. (2016). *The Truthful Art*.
+

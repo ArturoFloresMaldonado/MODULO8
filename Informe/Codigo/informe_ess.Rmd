@@ -31,7 +31,7 @@ knitr::opts_chunk$set(message = FALSE, warning = FALSE, fig.width = 8, fig.heigh
 # Portada
 
 **Alumno/a:** Arturo Flores Maldonado  
-**Docente:** *[Nombre de la docente]*  
+**Docente:** Mireia Ribera
 **Módulo:** Módulo 8 — Visualización de Datos y Storytelling  
 **Fecha:** `r format(Sys.Date(), "%d/%m/%Y")`
 
